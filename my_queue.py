@@ -1,16 +1,37 @@
 class MyQueue:
     def __init__(self, maxsize=20):
         self.maxsize = maxsize
-        pass
+        self.head = 0
+        self.tail = 0
+        self.size = 0  # size 可以去掉
+        self.items = [None] * maxsize
 
     def __len__(self):
-        pass
+        return self.size
 
-    def append(self):
-        pass
+    def _full(self):
+        return self.size == len(self.items)
+
+    def empty(self):
+        if self.head == self.tail:
+            return True
+
+    def append(self, item):
+        if self._full():
+            return
+        self.items[self.tail] = item
+        self.tail += 1
+        if self.tail > self.size:
+            self.tail = 0
+        self.size += 1
 
     def pop_left(self):
-        pass
+        if self.empty():
+            return None
+        self.size -= 1
+        result = self.items[self.head]
+        self.head += 1
+        return result
 
 
 class BlockQueue:
