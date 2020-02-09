@@ -21,15 +21,15 @@ class MyQueue:
             return
         self.items[self.tail] = item
         self.tail += 1
-        if self.tail > self.size:
+        if self.tail > len(self.items):
             self.tail = 0
         self.size += 1
 
     def pop_left(self):
         if self.empty():
             return None
-        self.size -= 1
         result = self.items[self.head]
+        self.size -= 1
         self.head += 1
         return result
 
