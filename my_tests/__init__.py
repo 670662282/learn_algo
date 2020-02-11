@@ -30,3 +30,35 @@
 #
 # # 找到difference_list 中最大的值和他所在在位置
 # index = difference_list.index(max(difference_list))
+from functools import lru_cache
+
+
+@lru_cache()
+def test_cache(a=1, b=2):
+    return a+b
+
+
+def log(text="ada"):
+    def decorator(func):
+
+        def wrapper(*args, **kw):
+            print('%s %s():' % (text, func.__name__))
+            return func(*args, **kw)
+
+        return wrapper
+    return decorator
+
+
+@log()
+def now():
+    print('2015-3-25')
+
+
+if __name__ == '__main__':
+    result = test_cache(2, 3)
+    result2 = test_cache(2, 3)
+    print(result)
+    print(result2)
+    print(test_cache.cache_info().hits)
+
+    now()

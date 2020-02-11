@@ -58,6 +58,7 @@ def _make_key(args, kwds, typed,
         return key[0]
     return _HashedSeq(key)
 
+
 def lru_cache(maxsize=128, typed=False):
     """Least-recently-used cache decorator.
 
@@ -94,6 +95,7 @@ def lru_cache(maxsize=128, typed=False):
         return update_wrapper(wrapper, user_function)
 
     return decorating_function
+
 
 def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
     # Constants shared by all lru cache instances:

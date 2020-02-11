@@ -36,9 +36,11 @@ class MyQueue:
 
 class BlockQueue:
     """简单阻塞队列实现"""
+    _queue = None
 
     def __init__(self, maxsize=20):
         self.maxsize = maxsize
+        self._init(maxsize)
 
     def empty(self):  # real signature unknown
         """ Return True if the queue is empty, False otherwise (not reliable!). """
@@ -85,11 +87,18 @@ class BlockQueue:
         """
         pass
 
-    def qsize(self):  # real signature unknown
+    def qsize(self):
         """ Return the approximate size of the queue (not reliable!). """
-        pass
+        return self._len()
 
-    @staticmethod  # known case of __new__
-    def __new__(*args, **kwargs):  # real signature unknown
-        """ Create and return a new object.  See help(type) for accurate signature. """
-        pass
+    def _init(self, maxsize):
+        self._queue = MyQueue(maxsize)
+
+    def _append(self, item):
+        self._queue.append(item)
+
+    def _pop_left(self):
+        return self._queue.pop_left()
+
+    def _len(self):
+        return len(self._queue)

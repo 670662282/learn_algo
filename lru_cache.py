@@ -1,5 +1,4 @@
 from weakref import proxy
-from functools import lru_cache
 
 
 class _Link:
