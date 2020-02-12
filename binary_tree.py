@@ -37,7 +37,10 @@ class BinarySearchTree:
         return result
 
     def high(self):
-        """二叉树的高度, 层级 - 1"""
+        """二叉树的高度, 层级 - 1
+        使用List模拟队列， level_queue 记录每层的node
+        level_queue长度为0，表示遍历结束
+        """
         root = self._root
         level = 0
         level_queue = [root] if root else []
