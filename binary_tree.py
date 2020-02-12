@@ -1,3 +1,6 @@
+import math
+from queue import Queue
+
 from hash_table import logger
 
 
@@ -34,7 +37,28 @@ class BinarySearchTree:
         return result
 
     def high(self):
-        """二叉树的高度"""
+        """二叉树的高度, 层级 - 1"""
+        root = self._root
+        level = 0
+        level_queue = [root] if root else []
+        while len(level_queue) > 0:
+            level += 1
+            logger.debug(f'tree: {level} level,  {len(level_queue)} node')
+
+            queue = level_queue[:]
+            level_queue = []
+
+            while len(queue) > 0:
+                node = queue.pop(0)
+                logger.debug(node.value)
+
+                if node.left:
+                    level_queue.append(node.left)
+                if node.right:
+                    level_queue.append(node.right)
+
+            logger.debug('')
+        return level - 1
 
     def find_all(self, value):
         """find 所有值为value的节点列表
@@ -159,6 +183,62 @@ class BinarySearchTree:
             root = root.left
         return root
 
+    def __repr__(self):
+        return self._draw_tree()
+
+    def _bfs(self):
+        """
+        bfs
+        通过父子关系记录节点编号
+        :return:
+        """
+        if self._root is None:
+            return []
+
+        ret = []
+        q = Queue()
+        # 队列[节点，编号]
+        q.put((self._root, 1))
+
+        while not q.empty():
+            n = q.get()
+
+            if n[0] is not None:
+                ret.append((n[0].value, n[1]))
+                q.put((n[0].left, n[1] * 2))
+                q.put((n[0].right, n[1] * 2 + 1))
+
+        return ret
+
+    def _draw_tree(self):
+        """
+        可视化
+        :return:
+        """
+        nodes = self._bfs()
+
+        if not nodes:
+            print('This tree has no nodes.')
+            return
+
+        layer_num = int(math.log(nodes[-1][1], 2)) + 1
+
+        prt_nums = []
+
+        for i in range(layer_num):
+            prt_nums.append([None] * 2 ** i)
+
+        for v, p in nodes:
+            row = int(math.log(p, 2))
+            col = p % 2 ** row
+            prt_nums[row][col] = v
+
+        prt_str = ''
+        for l in prt_nums:
+            prt_str += str(l)[1:-1] + '\n'
+
+        return prt_str
+
 
 def pre_order(root):
     if root:
@@ -187,7 +267,6 @@ def level_order(root):
     其思路就是将二叉树的节点加入队列，出队的同时将其非空左右孩子依次入队，出队到队列为空即完成遍历。
     """
     queue = [root]
-
     while queue != [] and root:
         print(queue[0].value)
         if queue[0].left:
@@ -195,3 +274,18 @@ def level_order(root):
         if queue[0].right:
             queue.append(queue[0].right)
         queue.pop(0)
+
+
+if __name__ == '__main__':
+    tree = BinarySearchTree()
+    tree.insert(6)
+    tree.insert(4)
+    tree.insert(8)
+    tree.insert(2)
+    tree.insert(5)
+    tree.insert(7)
+    tree.insert(9)
+    tree.insert(1)
+    tree.insert(3)
+    print(tree)
+    print(tree.high())
