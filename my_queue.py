@@ -102,3 +102,26 @@ class BlockQueue:
 
     def _len(self):
         return len(self._queue)
+
+
+class PriorityQueue:
+    """优先级队列应用场景非常多, 堆和优先级队列非常相似。一个堆就可以看作一个优先级队列。
+    很多时候，它们只是概念上的区分而已。
+    往优先级队列中插入一个元素，就相当于往堆中插入一个元素；
+    从优先级队列中取出优先级最高的元素，就相当于取出堆顶元素
+    """
+    def __init__(self):
+        pass
+
+    def _init(self, maxsize):
+        self._queue = MyQueue(maxsize)
+
+    def _append(self, item):
+        self._queue.append(item)
+
+    def _pop_left(self):
+        return self._queue.pop_left()
+
+    def _len(self):
+        return len(self._queue)
+
