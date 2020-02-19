@@ -1,7 +1,80 @@
+import os
+from queue import PriorityQueue
+
+"""小堆
+从数组0开始
+a[i] <= a[2*i+1] and a[i] <= a[2*i+2]  父节点就是下标为  i // 2 - 1的节点
+"""
+
+
+def swap(list_, pos_a, pos_b):
+    list_[pos_a], list_[pos_b] = list_[pos_b], list_[pos_a]
+
+
+def _heap_up_min(heap, start_pos: int = 0):
+    # 自下往上堆化 Restore the heap invariant
+    current = len(heap)
+    try:
+        while current // 2 - 1 >= start_pos and heap[current - 1] < heap[current // 2 - 1]:
+            swap(heap, current // 2 - 1, current - 1)
+            current = current // 2 - 1
+    except IndexError:
+        print(current // 2 - 1)
+        exit(-1)
+
+
+def heap_push_min(heap: list, item):
+    heap.append(item)
+    if len(heap) > 1:
+        _heap_up_min(heap)
+
+
+def heap_pop_min(heap):
+    last = heap.pop()
+
+    if heap:
+        result = heap[0]
+        heap[0] = last
+        heapify_min(heap)
+        return result
+    return last
+
+
+def heap_replace_min(heap, item):
+    """ heap pop and push"""
+    result = heap[0]
+    heap[0] = item
+    heapify_min(heap)
+    return result
+
+
+def heapify_min(heap, start_pos: int = 0):
+    """从上往下堆化"""
+    size = len(heap)
+    while True:
+        left_child_pos = start_pos * 2 + 1
+        right_child_pos = left_child_pos + 1
+
+        min_pos = start_pos
+        if left_child_pos < size and heap[left_child_pos] < heap[start_pos]:
+            min_pos = left_child_pos
+
+        if right_child_pos < size and heap[right_child_pos] < heap[min_pos]:
+            min_pos = right_child_pos
+
+        if min_pos == start_pos:
+            break
+        swap(heap, min_pos, start_pos)
+        start_pos = min_pos
+
+
 class Heap:
     """大堆 基于数组实现
+    基于数组1开始的
+    a[i] <= a[2*i] and a[i] <= a[2*i+1]
     数组中下标为 i 的节点的左子节点，就是下标为 i∗2 的节点，右子节点就是下标为 i∗2+1 的节点，父节点就是下标为 i // 2​的节点。
     """
+
     def __init__(self, capacity):
         self.items = [None] * (capacity + 1)
         self.count = 0
@@ -16,19 +89,22 @@ class Heap:
     def __swap(self, a: int, b: int):
         self.items[b], self.items[a] = self.items[a], self.items[b]
 
-    def insert(self, value):
+    def heap_push(self, value):
         if self.count > len(self.items):
             return
         self.count += 1
         self.items[self.count] = value
         current = self.count
-        # 自下往上堆化
-        while current // 2 >= self.__top_pos and self.items[current] > self.items[current//2]:
+        self._heap_up(current)
+
+    def _heap_up(self, current):
+        # 自下往上堆化 Restore the heap invariant
+        while current // 2 >= self.__top_pos and self.items[current] > self.items[current // 2]:
             # 交换
             self.__swap(current // 2, current)
             current = current // 2
 
-    def remove_max_value(self):
+    def heap_pop(self):
         if self.count == 0:
             print('items count is 0')
             return None
@@ -58,6 +134,12 @@ class Heap:
         if i * 2 + 1 > self.count:
             return None
         return i * 2 + 1
+
+    def heap_replace(self, item):
+        result = self.items[1]
+        self.items[1] = item
+        self.heapify()
+        return result
 
     def heapify(self, start_pos: int = None):
         """自上往下堆化
@@ -109,19 +191,74 @@ class Heap:
         result = [None] * (len(self.items) - 1)
 
         if reverse:
-            for index in range(len(result)-1, -1, -1):
-                result[index] = self.remove_max_value()
+            for index in range(len(result) - 1, -1, -1):
+                result[index] = self.heap_pop()
         else:
             for index in range(len(result)):
-                result[index] = self.remove_max_value()
+                result[index] = self.heap_pop()
 
         self.items = item_bak
         self.count = count_bak
         return result
 
 
+"""
+堆的应用一 合并100个有序小文件 到一个有序大文件
+"""
 
 
+def file_name(file_dir):
+    for root, dirs, files in os.walk(file_dir):
+        print('root_dir:', root)  # 当前目录路径
+        print('sub_dirs:', dirs)  # 当前路径下所有子目录
+        print('files:', files)  # 当前路径下所有非目录子文件
+        return files
 
 
+class FileMerge:
+    """
+    这里就可以用到优先级队列，也可以说是堆。我们将从小文件中取出来的字符串放入到小顶堆中，
+    那堆顶的元素，也就是优先级队列队首的元素，就是最小的字符串。
+    我们将这个字符串放入到大文件中，并将其从堆中删除。
+    然后再从小文件中取出下一个字符串，放入到堆中。
+    循环这个过程，就可以将 100 个小文件中的数据依次放入到大文件中。
+    """
 
+    def __init__(self, file_dir):
+        self.file_dir = file_dir
+        self.file_list = file_name(file_dir)
+        self.heap = []
+
+    def run(self, out_put_file='output.txt'):
+        for file in self.file_list:
+            path = os.path.join(self.file_dir, file)
+            with open(path) as f:
+                heap_push_min(self.heap, (f.read(1), path))
+
+        self._merge(out_put_file)
+
+    def _merge(self, out_put_file):
+        with open(out_put_file, 'w') as f_w:
+            for index, file in self.heap:
+                with open(file) as f_r:
+                    for line in f_r:
+                        f_w.write(line)
+
+
+"""
+高性能定时器
+这样每过 1 秒就扫描一遍任务列表的做法比较低效，
+主要原因有两点：第一，任务的约定执行时间离当前时间可能还有很久，这样前面很多次扫描其实都是徒劳的；
+第二，每次都要扫描整个任务列表，如果任务列表很大的话，势必会比较耗时。
+针对这些问题，我们就可以用优先级队列来解决。我们按照任务设定的执行时间，将这些任务存储在优先级队列中
+，队列首部（也就是小顶堆的堆顶）存储的是最先执行的任务。这样，定时器就不需要每隔 1 秒就扫描一遍任务列表了。
+它拿队首任务的执行时间点，与当前时间点相减，得到一个时间间隔 T。这个时间间隔 T 就是，从当前时间开始，需要等待多久，
+才会有第一个任务需要被执行。这样，定时器就可以设定在 T 秒之后，再来执行任务。从当前时间点到（T-1）秒这段时间里，
+定时器都不需要做任何事情。当 T 秒时间过去之后，定时器取优先级队列中队首的任务执行。
+然后再计算新的队首任务的执行时间点与当前时间点的差值，把这个值作为定时器执行下一个任务需要等待的时间
+"""
+
+
+class Schedule:
+    def __init__(self):
+        pass
