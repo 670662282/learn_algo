@@ -20,6 +20,8 @@ def link_node_merge(link_1, link_2):
 
 
 def link_node_median():
+    """求Link 的中间节点
+    """
     link_node = MyLinkNode(1, 2, 3, 4, 5, 6, 7)
     fast_p = link_node.first_node
     slow_p = fast_p

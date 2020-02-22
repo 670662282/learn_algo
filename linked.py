@@ -10,8 +10,6 @@ class BiDirectionalNode(Node):
         super().__init__(*args, **kwargs)
         self.previous = None
 
-# todo 改成弱引用
-
 
 class MyLinkNode:
     """双向循环链表实现list数据结构
@@ -100,6 +98,8 @@ class MyLinkNode:
         pass
 
     def reverse(self):
+        """反转链表
+        """
         prev = self.head
         current = self.head
 

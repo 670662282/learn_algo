@@ -1,7 +1,9 @@
-import unittest
 import difflib
+import unittest
+from time import time, sleep
 
-from heap import Heap, heap_push_min, heap_pop_min, heap_replace_min, FileMerge, file_name
+from heap import Heap, heap_push_min, heap_pop_min, heap_replace_min, FileMerge, PriorityQueue, Schedule, \
+    ScheduleClient, TopK
 
 
 class TestHashMapCase(unittest.TestCase):
@@ -51,6 +53,41 @@ class TestHashMapCase(unittest.TestCase):
                     f_1.readlines(), f_2.readlines(), fromfile='output.txt', tofile='expect_output.txt')
             if list(result):
                 raise AssertionError(f'file merge file, diff: {result}')
+
+    def test_schedule(self):
+        a_queue = PriorityQueue()
+        cron = Schedule(a_queue)
+        cron.start()
+
+        cron = ScheduleClient(a_queue)
+        time_ = time()
+        cron.input_task(time_ + 4, 'first task', lambda x: print(f'first task at {x()}'), time)
+        cron.input_task(time_ + 8, 'second task', lambda x: print(f'second task at {x()}'), time)
+
+        sleep(1)
+        cron.input_task(time_ + 2, 'insert task', lambda x: print(f'insert task  at {x()}'), time)
+        print('input done')
+        print()
+
+    def test_top_K(self):
+        random_num_list = [395, 236, 921, 273, 468, 146, 832, 730, 607, 775, 441, 372, 431, 44, 697, 359, 238, 108, 166,
+                           914, 484, 852,
+                           897, 555, 251, 685, 826, 136, 534, 932, 533, 356, 130, 396, 220, 133, 56, 499, 959, 888, 185,
+                           794, 685, 782,
+                           191, 743, 953, 719, 585, 875, 592, 332, 961, 399, 287, 776, 380, 29, 512, 146, 118, 757, 788,
+                           313, 260, 207,
+                           96, 397, 379, 344, 828, 412, 705, 63, 332, 997, 411, 216, 221, 218, 418, 701, 269, 837, 717,
+                           866,
+                           733, 818,
+                           251, 658, 243, 8, 650, 949, 459, 694, 291, 841, 431, 161]
+
+        top_k = TopK(random_num_list)
+        top_k.init()
+        list_1 = sorted(top_k.heap)
+        list_2 = sorted(random_num_list)[-10:]
+        self.assertListEqual(list_1, list_2)
+
+
 
 
 

@@ -39,14 +39,16 @@ def get_hash_table(table):
 
 
 class HashMap:
-    """单向链表解决散列冲突
+    """
+    无序字典
+    单向链表解决散列冲突
     todo 红黑树代替单向链表
     """
 
     def __init__(self, table_size=16):
         self._table_size = table_size
         self._table = [None] * self._table_size
-        self._new_table = None
+        self._new_table = None  # 扩容之后 数据分次搬移到 new_table
         self._size = 0  # number of nodes in the map
         self._LOAD_FACTOR = 0.75
 
@@ -143,7 +145,7 @@ class HashMap:
             self._size -= 1
             return node.value
         else:
-            # 散列冲突后
+            # 散列冲突后 冲突的值放入单向链表
             while node.next is not None:
                 pre = node
                 node = node.next
@@ -183,8 +185,8 @@ class HashMap:
         return node.value
 
     def resize(self):
-        """只申请新空间，但并不将老的数据搬移到新散列表中。
-        每次操作只搬移一个数据
+        """只申请新空间，但并不将旧的数据立即搬移到新散列表中，而是分批次搬移，每次操作只搬移一个数据
+        避免扩容的时候影响性能， 搬移操作时间均摊每次插入中
         :return:
         """
 

@@ -30,6 +30,7 @@
 #
 # # 找到difference_list 中最大的值和他所在在位置
 # index = difference_list.index(max(difference_list))
+import random
 from functools import lru_cache
 
 
@@ -52,6 +53,13 @@ def log(text="ada"):
 @log()
 def now():
     print('2015-3-25')
+
+
+def gen_randoms():
+    r = []
+    for _ in range(100):
+        r.append(random.randint(1, 1000))
+    return r
 
 
 if __name__ == '__main__':

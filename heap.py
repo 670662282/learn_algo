@@ -1,5 +1,9 @@
 import os
-from queue import PriorityQueue
+import random
+import threading
+from time import time, sleep
+
+from my_queue import BlockQueue
 
 """小堆
 从数组0开始
@@ -246,10 +250,11 @@ class FileMerge:
 
 
 """
-高性能定时器
-这样每过 1 秒就扫描一遍任务列表的做法比较低效，
+简单定时器
+每过 1 秒就扫描一遍任务列表的做法比较低效，
 主要原因有两点：第一，任务的约定执行时间离当前时间可能还有很久，这样前面很多次扫描其实都是徒劳的；
 第二，每次都要扫描整个任务列表，如果任务列表很大的话，势必会比较耗时。
+
 针对这些问题，我们就可以用优先级队列来解决。我们按照任务设定的执行时间，将这些任务存储在优先级队列中
 ，队列首部（也就是小顶堆的堆顶）存储的是最先执行的任务。这样，定时器就不需要每隔 1 秒就扫描一遍任务列表了。
 它拿队首任务的执行时间点，与当前时间点相减，得到一个时间间隔 T。这个时间间隔 T 就是，从当前时间开始，需要等待多久，
@@ -258,7 +263,124 @@ class FileMerge:
 然后再计算新的队首任务的执行时间点与当前时间点的差值，把这个值作为定时器执行下一个任务需要等待的时间
 """
 
+event = threading.Event()
 
-class Schedule:
+
+class PriorityQueue(BlockQueue):
+    def _init(self, maxsize):
+        self._queue = []
+
+    def _append(self, item):
+        heap_push_min(self._queue, item)
+
+    def _pop_left(self):
+        return heap_pop_min(self._queue)
+
+    def _qsize(self):
+        return len(self._queue)
+
+    def top(self):
+        if not self.empty():
+            return self._queue[0]
+
+
+class Schedule(threading.Thread):
+    def __init__(self, queue):
+        super().__init__()
+        self.queue = queue
+        self.remain_time = None
+
+    def parse_task(self):
+        """查看队首任务的执行时间点，与当前时间点相减，得到一个时间间隔 T，这段时间点将阻塞
+        如果唤醒后（每次队列首任务变化了也会唤醒），再次查看查看队首任务的执行时间点，是不是当前任务，如果是，则返回这个task
+
+        如果不是，则重复
+        """
+        while True:
+            if not self.queue.empty():
+                break
+
+        while True:
+            task = self.queue.top()
+            remain_time = task[0] - time()
+            if remain_time > 0.0:
+                # print(f'{task[1]} wait {remain_time} ')
+                event.wait(remain_time)
+
+            # 唤醒后， 如果没有新任务插入则返回
+            if task == self.queue.top():
+                return self.queue.get()
+            else:
+                print('队列首变化事件处理完成')
+                event.clear()
+
+    def run(self):
+        print("开启线程：")
+        while True:
+            task = self.parse_task()
+            print(task)
+            print()
+            task[2](*task[3], **task[4])
+
+
+class ScheduleClient:
+    def __init__(self, queue):
+        self.queue = queue
+
+    def input_task(self, task_time, fun_name, func, *args, **kwargs):
+        if time() > task_time:
+            raise ValueError('delay_time is elapsed time')
+
+        if not callable(func):
+            raise ValueError('fun must be callable')
+
+        if self.queue.top() and task_time < self.queue.top()[0]:
+            print('发生队列首变化事件，唤醒线程')
+            event.set()
+        self.queue.put_nowait((task_time, fun_name, func, args, kwargs))
+
+
+class TopK:
+    """
+    求 Top K 的问题抽象成两类。
+    一类是针对静态数据集合，也就是说数据集合事先确定，不会再变。
+    另一类是针对动态数据集合，也就是说数据集合事先并不确定，有数据动态地加入到集合中。
+
+    针对静态数据，如何在一个包含 n 个数据的数组中，查找前 K 大数据呢？
+
+    我们可以维护一个大小为 K 的小顶堆，顺序遍历数组，从数组中取出数据与堆顶元素比较。
+    如果比堆顶元素大，我们就把堆顶元素删除，并且将这个元素插入到堆中；如果比堆顶元素小，则不做处理，继续遍历数组。
+    这样等数组中的数据都遍历完之后，堆中的数据就是前 K 大数据了。
+
+    遍历数组需要 O(n) 的时间复杂度，一次堆化操作需要 O(logK) 的时间复杂度，所以最坏情况下，n 个元素都入堆一次，时间复杂度就是 O(nlogK)。
+
+    针对动态数据求得 Top K 就是实时 Top K
+    如果每次询问前 K 大数据，我们都基于当前的数据重新计算的话，那时间复杂度就是 O(nlogK)，n 表示当前的数据的大小。
+    实际上，我们可以一直都维护一个 K 大小的小顶堆，当有数据被添加到集合中时，我们就拿它与堆顶的元素对比。
+    如果比堆顶元素大，我们就把堆顶元素删除，并且将这个元素插入到堆中；
+    如果比堆顶元素小，则不做处理。这样，无论任何时候需要查询当前的前 K 大数据，我们都可以立刻返回给他。
+    """
+
+    def __init__(self, big_nums_list, k=10):
+        self.big_nums_list = big_nums_list
+        self.k = k
+        self.heap = []
+
+    def init(self):
+        for i in self.big_nums_list[:self.k]:
+            heap_push_min(self.heap, i)
+
+        for i in self.big_nums_list[self.k:]:
+            self.update(i)
+
+    def update(self, num):
+        if num > self.heap[0]:
+            heap_replace_min(self.heap, num)
+
+
+class GetDynamicMedian:
+
     def __init__(self):
         pass
+
+

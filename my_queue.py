@@ -2,8 +2,6 @@ import threading
 from queue import Empty, Full
 from time import time
 
-from heap import heap_push_min, heap_pop_min
-
 
 class MyQueue:
     def __init__(self, maxsize=20):
@@ -47,11 +45,11 @@ class BlockQueue:
 
     def __init__(self, maxsize=20):
         self.maxsize = maxsize
-        self._init(maxsize)
-
         self.lock = threading.Lock()
         self.no_empty = threading.Condition(self.lock)
         self.no_full = threading.Condition(self.lock)
+
+        self._init(maxsize)
 
     def empty(self):
         """ Return True if the queue is empty, False otherwise (not reliable!). """
@@ -96,12 +94,12 @@ class BlockQueue:
                     while not self._qsize():
                         self.no_empty.wait()
 
-            result = self._queue.pop_left()
+            result = self._pop_left()
             self.no_full.notify()
             return result
 
     def _check(self, timeout):
-        if timeout < 0:
+        if timeout and timeout < 0:
             raise ValueError("'timeout' must be a non-negative number")
 
     def get_nowait(self):  # real signature unknown
@@ -166,14 +164,15 @@ class PriorityQueue(BlockQueue):
     往优先级队列中插入一个元素，就相当于往堆中插入一个元素；
     从优先级队列中取出优先级最高的元素，就相当于取出堆顶元素
     """
-
     def _init(self, maxsize):
         self._queue = []
 
     def _append(self, item):
+        from heap import heap_push_min
         heap_push_min(self._queue, item)
 
     def _pop_left(self):
+        from heap import heap_pop_min
         return heap_pop_min(self._queue)
 
     def _qsize(self):

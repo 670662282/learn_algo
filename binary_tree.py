@@ -12,8 +12,9 @@ class Node:
 
 
 class BinarySearchTree:
-    """二叉查找树要求，在树中的任意一个节点，
-    其左子树中的每个节点的值，都要小于这个节点的值，而右子树节点的值都大于这个节点的值
+    """二叉查找树基于链表
+    要求，在树中的任意一个节点，
+    其左子树中的每个节点的值，都要小于这个节点的值，而右子树节点的值都大于或者等于这个节点的值
     """
     def __init__(self):
         self._root = None
@@ -38,7 +39,7 @@ class BinarySearchTree:
 
     def high(self):
         """二叉树的高度, 层级 - 1
-        使用List模拟队列， level_queue 记录每层的node
+        使用List模拟队列， level_queue 记录每层的node 每次遍历树一层， 清空level_queue
         level_queue长度为0，表示遍历结束
         """
         root = self._root
@@ -65,6 +66,9 @@ class BinarySearchTree:
 
     def find_all(self, value):
         """find 所有值为value的节点列表
+        如果value小于节点，那么去左边子节点查找
+        如果value大于节点， 那么去右边子节点查找
+        如果查找了一个值，那么继续查找改节点右边的值直到最后一个节点
         """
         current = self._root
 
@@ -91,6 +95,10 @@ class BinarySearchTree:
             self._insert(root, value)
 
     def _insert(self, root, value):
+        """ 递归
+        如果value 大于等于 节点某个值，且节点右子节点不存在，则插入，不然则继续向右子节点查找，直到找到右子节点为空的节点
+        如果value 小于 节点某个值，且节点左子节点不存在，则插入，不然则继续向左子节点查找，直到找到左子节点为空的节点
+        """
         if value >= root.value:
 
             if root.right is None:
@@ -244,6 +252,8 @@ class BinarySearchTree:
 
 
 def pre_order(root):
+    """前序遍历 递归
+    """
     if root:
         print(root.value)
         pre_order(root.left)
@@ -251,6 +261,8 @@ def pre_order(root):
 
 
 def in_order(root):
+    """中序遍历 递归
+    """
     if root:
         in_order(root.left)
         print(root.value)
@@ -258,6 +270,8 @@ def in_order(root):
 
 
 def post_order(root):
+    """后续遍历 递归
+    """
     if root:
         post_order(root.left)
         post_order(root.right)
