@@ -1,13 +1,14 @@
+import math
 import os
-import random
 import threading
-from time import time, sleep
+from time import time
 
 from my_queue import BlockQueue
 
 """小堆
 从数组0开始
-a[i] <= a[2*i+1] and a[i] <= a[2*i+2]  父节点就是下标为  i // 2 - 1的节点
+a[i] <= a[2*i+1] and a[i] <= a[2*i+2]  父节点就是下标为  i // 2  -1的节点
+
 """
 
 
@@ -15,22 +16,25 @@ def swap(list_, pos_a, pos_b):
     list_[pos_a], list_[pos_b] = list_[pos_b], list_[pos_a]
 
 
-def _heap_up_min(heap, start_pos: int = 0):
+def _heap_down_min(heap, pos, start_pos=0):
     # 自下往上堆化 Restore the heap invariant
-    current = len(heap)
-    try:
-        while current // 2 - 1 >= start_pos and heap[current - 1] < heap[current // 2 - 1]:
-            swap(heap, current // 2 - 1, current - 1)
-            current = current // 2 - 1
-    except IndexError:
-        print(current // 2 - 1)
-        exit(-1)
+    # 减少比较次数
+    new_item = heap[pos]
+
+    while pos > start_pos:
+        parent_pos = pos - 1 >> 1
+        parent = heap[parent_pos]
+        if new_item < parent:
+            heap[pos] = parent
+            pos = parent_pos
+            continue
+        break
+    heap[pos] = new_item
 
 
 def heap_push_min(heap: list, item):
     heap.append(item)
-    if len(heap) > 1:
-        _heap_up_min(heap)
+    _heap_down_min(heap, len(heap)-1)
 
 
 def heap_pop_min(heap):
@@ -70,6 +74,77 @@ def heapify_min(heap, start_pos: int = 0):
             break
         swap(heap, min_pos, start_pos)
         start_pos = min_pos
+
+
+"""大堆
+从数组0开始
+"""
+
+
+def _heap_up_max(heap, pos, start_pos: int = 0):
+    # 自下往上堆化 Restore the heap invariant
+    new_item = heap[pos]
+
+    while pos > start_pos:
+        parent_pos = pos - 1 >> 1
+        parent = heap[parent_pos]
+
+        if new_item > parent:
+            heap[pos] = parent
+            pos = parent_pos
+            continue
+        break
+    heap[pos] = new_item
+
+
+def heap_pop_max(heap):
+    last = heap.pop()
+
+    if heap:
+        result = heap[0]
+        heap[0] = last
+        heapify_max(heap)
+        return result
+    return last
+
+
+def heap_push_max(heap, value):
+    heap.append(value)
+    _heap_up_max(heap, len(heap)-1)
+
+
+def heapify_max(heap, start_pos: int = 0):
+    """从上往下堆化"""
+    size = len(heap)
+    while True:
+        left_child_pos = start_pos * 2 + 1
+        right_child_pos = left_child_pos + 1
+
+        max_pos = start_pos
+        if left_child_pos < size and heap[start_pos] < heap[left_child_pos]:
+            max_pos = left_child_pos
+
+        if right_child_pos < size and heap[max_pos] < heap[right_child_pos]:
+            max_pos = right_child_pos
+
+        if max_pos == start_pos:
+            break
+        swap(heap, max_pos, start_pos)
+        start_pos = max_pos
+
+
+def build_heap(items: list, heapify=heapify_min):
+    """建堆 默认小堆
+    从后往前处理数组
+    从非叶子节点开始(倒数第二层) 从上往下堆化
+    heapify: 堆化函数
+    """
+    if len(items) < 2:
+        return
+    current = len(items) // 2
+    while current >= 0:
+        heapify(items, current)
+        current -= 1
 
 
 class Heap:
@@ -378,9 +453,104 @@ class TopK:
             heap_replace_min(self.heap, num)
 
 
-class GetDynamicMedian:
+class DynamicMedian:
+    """
+    对于一组静态数据，中位数是固定的，我们可以先排序，第 2n​ 个数据就是中位数。
+    每次询问中位数的时候，我们直接返回这个固定的值就好了。所以，尽管排序的代价比较大，但是边际成本会很小。
+    但是，如果我们面对的是动态数据集合，中位数在不停地变动，如果再用先排序的方法，每次询问中位数的时候，都要先进行排序，那效率就不高了
+    借助堆这种数据结构，我们不用排序，就可以非常高效地实现求中位数操作
 
-    def __init__(self):
-        pass
+    我们需要维护两个堆，一个大顶堆，一个小顶堆。大顶堆中存储前半部分数据，小顶堆中存储后半部分数据，且小顶堆中的数据都大于大顶堆中的数据。
+    如果有 n 个数据，n 是偶数，我们从小到大排序，
+    那前 2/n​ 个数据存储在大顶堆中，后 2/n​ 个数据存储在小顶堆中。
+    这样，大顶堆中的堆顶元素就是我们要找的中位数。
+    如果 n 是奇数，情况是类似的，大顶堆就存储 2/n​+1 个数据，小顶堆中就存储 2/n​ 个数据
+
+    当新添加一个数据的时候，我们如何调整两个堆，让大顶堆中的堆顶元素继续是中位数呢？
+    如果新加入的数据小于等于大顶堆的堆顶元素，我们就将这个新数据插入到大顶堆；否则，我们就将这个新数据插入到小顶堆。
+    """
+
+    def __init__(self, n=0.5):
+        self.n = n
+        self.max_heap = []  # 存储 前部分 nums_len * n
+        self.min_heap = []  # 存储 后部分 nums_len * （1-n）
+
+    def init(self, data_list):
+        data = sorted(data_list)
+        # 向上取整 如果是奇数 则大顶堆多存一个
+        value = self.split_value(len(data))
+        self.max_heap = data[:value]
+        self.min_heap = data[value:]
+        build_heap(self.max_heap, heapify=heapify_max)
+        build_heap(self.min_heap)
+
+    def split_value(self, count):
+        if self.n <= 0 or self.n >= 1:
+            raise ValueError('n must > 0 and <1')
+        return math.ceil(count * self.n)
+
+    @property
+    def value(self):
+        return self.max_heap[0]
+
+    def __len__(self):
+        return len(self.max_heap) + len(self.min_heap)
+
+    def insert(self, num):
+
+        if len(self.min_heap) == 0 or len(self.max_heap) == 0:
+            raise ValueError('must init')
+
+        if num > self.max_heap[0]:
+            heap_push_min(self.min_heap, num)
+        else:
+            heap_push_max(self.max_heap, num)
+
+        # 两个堆中的数据个数不符合前面约定的情况 我们可以从一个堆中不停地将堆顶元素移动到另一个堆
+        value = self.split_value(self.__len__())
+        print(f'split value: {value}')
+        if len(self.max_heap) > value:
+            self.move_to_min_heap()
+            return
+
+        if len(self.max_heap) < value:
+            self.move_to_max_heap()
+            return
+
+    def move_to_min_heap(self):
+        """大堆 堆顶 移动到小堆
+        """
+        # print(f'move_to_min_heap')
+        value = heap_pop_max(self.max_heap)
+        heap_push_min(self.min_heap, value)
+
+    def move_to_max_heap(self):
+        """小堆 堆顶 移动到大堆
+        """
+        # print(f'move_to_max_heap')
+        value = heap_pop_min(self.min_heap)
+        heap_push_max(self.max_heap, value)
 
 
+if __name__ == '__main__':
+    #nums = [6, 4, 1, 2, 3, 7]
+    nums = [395, 236, 921, 273, 468, 146, 832, 730, 607, 775, 441, 372, 431, 44, 697, 359, 238, 108, 166,
+            914, 484, 852,
+            897, 555, 251, 685, 826, 136, 534, 932, 533, 356, 130, 396, 220, 133, 56, 499, 959, 888, 185,
+            794, 685, 782,
+            191, 743, 953, 719, 585, 875, 592, 332, 961, 399, 287, 776, 380, 29, 512, 146, 118, 757, 788,
+            313, 260, 207,
+            96, 397, 379, 344, 828, 412, 705, 63, 332, 997, 411, 216, 221, 218, 418, 701, 269, 837, 717,
+            866,
+            733, 818,
+            251, 658, 243, 8, 650, 949, 459, 694, 291, 841, 431, 161]
+    dy = DynamicMedian()
+    dy.init(nums)
+    print(dy.min_heap)
+    print(dy.max_heap)
+
+    dy.insert(33)
+    dy.insert(0)
+    dy.insert(2)
+    print(f'min_heap: {dy.min_heap}')
+    print(f'max_heap: {dy.max_heap}')
