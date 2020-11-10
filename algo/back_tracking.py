@@ -110,4 +110,47 @@ def input_in_backpack(i, current_weight, items, nums, backpack_max_weight, resul
         input_in_backpack(i + 1, current_weight + items[i], items, nums, backpack_max_weight, result)
 
 
+"""
+正则表达式
+正则表达式中，最重要的就是通配符，通配符结合在一起，可以表达非常丰富的语义。
+为了方便讲解，我假设正则表达式中只包含“*”和“?”这两种通配符，
+并且对这两个通配符的语义稍微做些改变，其中，“*”匹配任意多个（大于等于 0 个）任意字符，“?”匹配零个或者一个任意字符。
+基于以上背景假设，我们看下，如何用回溯算法，判断一个给定的文本，能否跟给定的正则表达式匹配？
 
+
+我们依次考察正则表达式中的每个字符，当是非通配符时，我们就直接跟文本的字符进行匹配，如果相同，则继续往下处理；如果不同，则回溯。
+如果遇到特殊字符的时候，我们就有多种处理方式了，也就是所谓的岔路口，
+比如“*”有多种匹配方案，可以匹配任意个文本串中的字符，我们就先随意的选择一种匹配方案，然后继续考察剩下的字符。
+如果中途发现无法继续匹配下去了，我们就回到这个岔路口，重新选择一种匹配方案，然后再继续匹配剩下的字符。
+"""
+
+
+class Pattern:
+    def __init__(self, pattern):
+        self.pattern_ = pattern
+        self.matchd = False
+
+    def match(self, str_content):
+        self.rmatch(0, 0, str_content)
+
+    def rmatch(self, text_pos, pattern_pos, str_text):
+
+        if self.matchd is True:
+            return
+
+        if pattern_pos == len(str_text):
+            if text_pos == len(self.pattern_):
+                self.matchd = True
+            return
+
+        # 匹配任意字符
+        if self.pattern_[pattern_pos] == '*':
+            for k in range(len(str_text) - text_pos):
+                self.rmatch(text_pos + k, pattern_pos + 1, str_text)
+
+        elif self.pattern_[pattern_pos] == '?':
+            self.rmatch(text_pos, pattern_pos + 1, str_text)
+            self.rmatch(text_pos + 1, pattern_pos + 1, str_text)
+
+        elif text_pos < len(str_text) and self.pattern_[pattern_pos] == str_text[text_pos]:
+            self.rmatch(text_pos + 1, pattern_pos + 1, str_text)
